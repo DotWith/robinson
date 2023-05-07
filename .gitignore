@@ -1,4 +1,3 @@
-bin
-target
-output.png
-output.pdf
+/target
+Cargo.lock
+.vscode

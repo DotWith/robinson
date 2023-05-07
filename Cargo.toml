@@ -1,12 +1,10 @@
 [package]
 name = "robinson"
-version = "0.0.1"
+version = "0.1.0"
+edition = "2021"
 authors = ["Matt Brubeck <mbrubeck@limpet.net>"]
 
-[[bin]]
-name = "robinson"
-path = "src/main.rs"
-
 [dependencies]
-getopts = "0.2.21"
-image = "0.14"
+clap = { version = "4.2.7", features = ["derive"] }
+image = "0.24.6"
+thiserror = "1.0.40"
