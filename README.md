@@ -1,66 +1,17 @@
-Robinson
-========
+## Robinson
 
-A toy web rendering engine written in the Rust language, by Matt Brubeck
-(mbrubeck@limpet.net).
+Robinson is a toy web rendering engine written in Rust by Matt Brubeck (mbrubeck@limpet.net).
+It's main purpose if to render web pages, but as of now it lacks
+real-world usability, tandards compliance, performance and efficiency, and interoperability.
 
-I'm writing this code purely for educational purposes. My goal is to create an
-incomplete but extremely simple engine as a way to learn more about basic
-implementation techniques, *without* worrying about complications like:
+### Task list
 
-* <s>Real-world usability</s>
-* <s>Standards compliance</s>
-* <s>Performance and efficiency</s>
-* <s>Interoperability</s>
-
-These are all important goals, but there are other projects working on them.
-By ignoring them completely, this project can focus on being as simple and
-easy-to-understand as possible.
-
-Why create a simple—but useless—toy rendering engine? Mostly because I
-personally want to learn how to do it. If I succeed, I also hope that other
-people can learn from my code by reading or modifying it, or learn from my
-experience as they set out to build their own toy browser engines.
-
-For more details see [Let's build a browser engine!](http://limpet.net/mbrubeck/2014/08/08/toy-layout-engine-1.html), a series of
-how-to articles based on this project.
-
-Status
-------
-
-Currently implemented:
-
-* Parse a small subset of HTML and build a DOM tree.
-* Parse a small subset of CSS.
-* Perform selector matching to apply styles to elements.
-* Basic block layout.
-* Error handling.
-
-Coming soon, I hope:
-
-* Inline layout.
-* Paint text and boxes.
-* Load resources from network or filesystem.
-* Export to pdf.
-
-Instructions
-------------
-
-1. [Install Rust 1.0 beta or newer.](http://www.rust-lang.org/install.html)
-
-2. Clone the robinson source code from https://github.com/mbrubeck/robinson
-
-3. Run `cargo build` to build robinson, and `cargo run` to run it.
-
-To build and run with optimizations enabled, use `cargo build --release` and
-`cargo run --release`.
-
-By default, robinson will load test.html and test.css from the `examples`
-directory.  You can use the `--html` and `--css` arguments to the robinson
-executable to change the input files:
-
-    ./target/debug/robinson --html examples/test.html --css examples/test.css
-
-The rendered page will be saved to a file named `output.png`.  To change the
-output filename, use the `-o` option.  To switch to PDF output, use add
-`--format pdf`.
+- [X] Parse a small subset of HTML and build a DOM tree
+- [X] Parse a small subset of CSS
+- [X] Perform selector matching to apply styles to elements
+- [X] Implement basic block layout
+- [X] Implement error handling
+- [ ] Implement exporting to PDF
+- [ ] Implement inline layout
+- [ ] Implement text and box painting
+- [ ] Implement resource loading from network or filesystem

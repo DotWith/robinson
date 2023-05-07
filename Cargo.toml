@@ -2,7 +2,7 @@
 name = "robinson"
 version = "0.1.0"
 edition = "2021"
-authors = ["Matt Brubeck <mbrubeck@limpet.net>", "Dot <dotwith@tutanota.com>"]
+authors = ["Matt Brubeck <mbrubeck@limpet.net>", "DotWith <dotwith@tutanota.com>"]
 
 [workspace]
 members = ["crates/*"]
