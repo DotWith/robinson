@@ -5,7 +5,9 @@
 
 // Data structures:
 
-use crate::error::{Result, Error};
+mod error;
+
+pub use error::*;
 
 #[derive(Debug)]
 pub struct Stylesheet {

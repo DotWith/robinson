@@ -4,7 +4,17 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Matt Brubeck <mbrubeck@limpet.net>", "Dot <dotwith@tutanota.com>"]
 
+[workspace]
+members = ["crates/*"]
+
 [dependencies]
+robinson_html = { version = "0.1.0", path = "crates/robinson_html" }
+robinson_css = { version = "0.1.0", path = "crates/robinson_css" }
+robinson_layout = { version = "0.1.0", path = "crates/robinson_layout" }
+robinson_paint = { version = "0.1.0", path = "crates/robinson_paint" }
+robinson_style = { version = "0.1.0", path = "crates/robinson_style" }
+
+# other
 clap = { version = "4.2.7", features = ["derive"] }
 image = "0.24.6"
 thiserror = "1.0.40"

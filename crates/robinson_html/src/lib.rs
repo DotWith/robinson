@@ -10,18 +10,18 @@
 //! * Non-well-formed markup
 //! * Character entities
 
-use crate::dom;
+use robinson_dom::{Node, AttrMap};
 use std::collections::HashMap;
 
 /// Parse an HTML document and return the root element.
-pub fn parse(source: String) -> dom::Node {
+pub fn parse(source: String) -> Node {
     let mut nodes = Parser { pos: 0, input: source }.parse_nodes();
 
     // If the document contains a root element, just return it. Otherwise, create one.
     if nodes.len() == 1 {
         nodes.swap_remove(0)
     } else {
-        dom::elem("html".to_string(), HashMap::new(), nodes)
+        Node::new_element("html".to_string(), HashMap::new(), nodes)
     }
 }
 
@@ -32,7 +32,7 @@ struct Parser {
 
 impl Parser {
     /// Parse a sequence of sibling nodes.
-    fn parse_nodes(&mut self) -> Vec<dom::Node> {
+    fn parse_nodes(&mut self) -> Vec<Node> {
         let mut nodes = vec!();
         loop {
             self.consume_whitespace();
@@ -45,7 +45,7 @@ impl Parser {
     }
 
     /// Parse a single node.
-    fn parse_node(&mut self) -> dom::Node {
+    fn parse_node(&mut self) -> Node {
         match self.next_char() {
             '<' => self.parse_element(),
             _   => self.parse_text()
@@ -53,7 +53,7 @@ impl Parser {
     }
 
     /// Parse a single element, including its open tag, contents, and closing tag.
-    fn parse_element(&mut self) -> dom::Node {
+    fn parse_element(&mut self) -> Node {
         // Opening tag.
         assert_eq!(self.consume_char(), '<');
         let tag_name = self.parse_tag_name();
@@ -69,7 +69,7 @@ impl Parser {
         assert_eq!(self.parse_tag_name(), tag_name);
         assert_eq!(self.consume_char(), '>');
 
-        dom::elem(tag_name, attrs, children)
+        Node::new_element(tag_name, attrs, children)
     }
 
     /// Parse a tag or attribute name.
@@ -81,7 +81,7 @@ impl Parser {
     }
 
     /// Parse a list of name="value" pairs, separated by whitespace.
-    fn parse_attributes(&mut self) -> dom::AttrMap {
+    fn parse_attributes(&mut self) -> AttrMap {
         let mut attributes = HashMap::new();
         loop {
             self.consume_whitespace();
@@ -112,8 +112,8 @@ impl Parser {
     }
 
     /// Parse a text node.
-    fn parse_text(&mut self) -> dom::Node {
-        dom::text(self.consume_while(|c| c != '<'))
+    fn parse_text(&mut self) -> Node {
+        Node::new_text(self.consume_while(|c| c != '<'))
     }
 
     /// Consume and discard zero or more whitespace characters.

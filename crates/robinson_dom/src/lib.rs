@@ -6,11 +6,8 @@ pub type AttrMap = HashMap<String, String>;
 
 #[derive(Debug)]
 pub struct Node {
-    // data common to all nodes:
-    pub children: Vec<Node>,
-
-    // data specific to each node type:
     pub node_type: NodeType,
+    pub children: Vec<Node>,
 }
 
 #[derive(Debug)]
@@ -25,23 +22,21 @@ pub struct ElementData {
     pub attributes: AttrMap,
 }
 
-// Constructor functions for convenience:
-
-pub fn text(data: String) -> Node {
-    Node { children: vec![], node_type: NodeType::Text(data) }
-}
-
-pub fn elem(name: String, attrs: AttrMap, children: Vec<Node>) -> Node {
-    Node {
-        children: children,
-        node_type: NodeType::Element(ElementData {
-            tag_name: name,
-            attributes: attrs,
-        })
+impl Node {
+    pub fn new_text(data: String) -> Node {
+        Node { children: vec![], node_type: NodeType::Text(data) }
+    }
+    
+    pub fn new_element(name: String, attrs: AttrMap, children: Vec<Node>) -> Node {
+        Node {
+            children,
+            node_type: NodeType::Element(ElementData {
+                tag_name: name,
+                attributes: attrs,
+            })
+        }
     }
 }
-
-// Element methods
 
 impl ElementData {
     pub fn id(&self) -> Option<&String> {

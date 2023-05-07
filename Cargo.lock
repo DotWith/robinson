@@ -615,7 +615,54 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "image",
+ "robinson_css",
+ "robinson_html",
+ "robinson_layout",
+ "robinson_paint",
+ "robinson_style",
  "thiserror",
+]
+
+[[package]]
+name = "robinson_css"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "robinson_dom"
+version = "0.1.0"
+
+[[package]]
+name = "robinson_html"
+version = "0.1.0"
+dependencies = [
+ "robinson_dom",
+]
+
+[[package]]
+name = "robinson_layout"
+version = "0.1.0"
+dependencies = [
+ "robinson_css",
+ "robinson_style",
+]
+
+[[package]]
+name = "robinson_paint"
+version = "0.1.0"
+dependencies = [
+ "robinson_css",
+ "robinson_layout",
+]
+
+[[package]]
+name = "robinson_style"
+version = "0.1.0"
+dependencies = [
+ "robinson_css",
+ "robinson_dom",
 ]
 
 [[package]]

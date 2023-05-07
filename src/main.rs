@@ -1,9 +1,3 @@
-mod css;
-mod dom;
-mod html;
-mod layout;
-mod style;
-mod painting;
 mod error;
 
 use std::fs;
@@ -11,6 +5,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use error::Result;
+use robinson_layout::{Rect, Dimensions};
 
 /// A toy web rendering engine
 #[derive(Parser, Debug)]
@@ -34,22 +29,27 @@ fn main() -> Result<()> {
 
     // Read and parse html
     let html = fs::read_to_string(&args.html)?;
-    let root_node = html::parse(html);
+    let root_node = robinson_html::parse(html);
 
     // Read and parse css
-    let css  = fs::read_to_string(&args.css)?;
-    let stylesheet = css::parse(css)?;
+    let css = fs::read_to_string(&args.css)?;
+    let stylesheet = robinson_css::parse(css)?;
 
     // Since we don't have an actual window, hard-code the "viewport" size.
-    let mut viewport: layout::Dimensions = Default::default();
-    viewport.content.width  = 800.0;
-    viewport.content.height = 600.0;
+    let viewport = Dimensions {
+        content: Rect {
+            width: 800.0,
+            height: 600.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
 
     // Rendering
-    let style_root = style::style_tree(&root_node, &stylesheet);
-    let layout_root = layout::layout_tree(&style_root, viewport);
+    let style_root = robinson_style::style_tree(&root_node, &stylesheet);
+    let layout_root = robinson_layout::layout_tree(&style_root, viewport);
 
-    let canvas = painting::paint(&layout_root, viewport.content);
+    let canvas = robinson_paint::paint(&layout_root, viewport.content);
     let (w, h) = (canvas.width as u32, canvas.height as u32);
     let imgbuf = image::ImageBuffer::from_fn(w, h, move |x, y| {
         let color = canvas.pixels[(y * w + x) as usize];

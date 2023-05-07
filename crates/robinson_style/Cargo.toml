@@ -1,0 +1,8 @@
+[package]
+name = "robinson_style"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+robinson_dom = { version = "0.1.0", path = "../robinson_dom" }
+robinson_css = { version = "0.1.0", path = "../robinson_css" }

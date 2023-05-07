@@ -1,0 +1,7 @@
+[package]
+name = "robinson_html"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+robinson_dom = { version = "0.1.0", path = "../robinson_dom" }

@@ -1,8 +1,8 @@
 ///! Basic CSS block layout.
 
-use crate::style::{StyledNode, Display};
-use crate::css::Value::{Keyword, Length};
-use crate::css::Unit::Px;
+use robinson_style::{StyledNode, Display};
+use robinson_css::Value::{Keyword, Length};
+use robinson_css::Unit::Px;
 use std::default::Default;
 
 pub use self::BoxType::{AnonymousBlock, InlineNode, BlockNode};
