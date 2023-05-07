@@ -2,7 +2,7 @@
 name = "robinson"
 version = "0.1.0"
 edition = "2021"
-authors = ["Matt Brubeck <mbrubeck@limpet.net>"]
+authors = ["Matt Brubeck <mbrubeck@limpet.net>", "Dot <dotwith@tutanota.com>"]
 
 [dependencies]
 clap = { version = "4.2.7", features = ["derive"] }
