@@ -3,8 +3,8 @@
 //! This is not very interesting at the moment.  It will get much more
 //! complicated if I add support for compound selectors.
 
-use robinson_dom::{Node, NodeType, ElementData};
 use robinson_css::{Stylesheet, Rule, Selector, SimpleSelector, Value, Specificity};
+use robinson_dom::{Node, Element};
 use std::collections::HashMap;
 
 /// Map from CSS property names to values.
@@ -57,18 +57,22 @@ impl<'a> StyledNode<'a> {
 pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a Stylesheet) -> StyledNode<'a> {
     StyledNode {
         node: root,
-        specified_values: match root.node_type {
-            NodeType::Element(ref elem) => specified_values(elem, stylesheet),
-            NodeType::Text(_) => HashMap::new()
+        specified_values: match root {
+            Node::Element(elem) => specified_values(elem, stylesheet),
+            Node::Text(_) | Node::Comment(_) => HashMap::new()
         },
-        children: root.children.iter().map(|child| style_tree(child, stylesheet)).collect(),
+        children: if let Some(element) = root.element() {
+            element.children.iter().map(|child| style_tree(child, stylesheet)).collect()
+        } else {
+            vec![]
+        }
     }
 }
 
 /// Apply styles to a single element, returning the specified styles.
 ///
 /// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
-fn specified_values(elem: &ElementData, stylesheet: &Stylesheet) -> PropertyMap {
+fn specified_values(elem: &Element, stylesheet: &Stylesheet) -> PropertyMap {
     let mut values = HashMap::new();
     let mut rules = matching_rules(elem, stylesheet);
 
@@ -86,7 +90,7 @@ fn specified_values(elem: &ElementData, stylesheet: &Stylesheet) -> PropertyMap 
 type MatchedRule<'a> = (Specificity, &'a Rule);
 
 /// Find all CSS rules that match the given element.
-fn matching_rules<'a>(elem: &ElementData, stylesheet: &'a Stylesheet) -> Vec<MatchedRule<'a>> {
+fn matching_rules<'a>(elem: &Element, stylesheet: &'a Stylesheet) -> Vec<MatchedRule<'a>> {
     // For now, we just do a linear scan of all the rules.  For large
     // documents, it would be more efficient to store the rules in hash tables
     // based on tag name, id, class, etc.
@@ -94,33 +98,33 @@ fn matching_rules<'a>(elem: &ElementData, stylesheet: &'a Stylesheet) -> Vec<Mat
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &ElementData, rule: &'a Rule) -> Option<MatchedRule<'a>> {
+fn match_rule<'a>(elem: &Element, rule: &'a Rule) -> Option<MatchedRule<'a>> {
     // Find the first (most specific) matching selector.
     rule.selectors.iter().find(|selector| matches(elem, *selector))
         .map(|selector| (selector.specificity(), rule))
 }
 
 /// Selector matching:
-fn matches(elem: &ElementData, selector: &Selector) -> bool {
+fn matches(elem: &Element, selector: &Selector) -> bool {
     match *selector {
         Selector::Simple(ref simple_selector) => matches_simple_selector(elem, simple_selector)
     }
 }
 
-fn matches_simple_selector(elem: &ElementData, selector: &SimpleSelector) -> bool {
+fn matches_simple_selector(elem: &Element, selector: &SimpleSelector) -> bool {
     // Check type selector
-    if selector.tag_name.iter().any(|name| elem.tag_name != *name) {
+    if selector.tag_name.iter().any(|name| elem.name != *name) {
         return false
     }
 
     // Check ID selector
-    if selector.id.iter().any(|id| elem.id() != Some(id)) {
+    if selector.id.iter().any(|id| elem.id != Some(id.to_string())) {
         return false;
     }
 
     // Check class selectors
-    let elem_classes = elem.classes();
-    if selector.class.iter().any(|class| !elem_classes.contains(&**class)) {
+    let elem_classes = &elem.classes;
+    if selector.class.iter().any(|class| !elem_classes.contains(class)) {
         return false;
     }
 

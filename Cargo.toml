@@ -8,7 +8,7 @@ authors = ["Matt Brubeck <mbrubeck@limpet.net>", "DotWith <dotwith@tutanota.com>
 members = ["crates/*"]
 
 [dependencies]
-robinson_html = { version = "0.1.0", path = "crates/robinson_html" }
+robinson_dom = { version = "0.1.0", path = "crates/robinson_dom" }
 robinson_css = { version = "0.1.0", path = "crates/robinson_css" }
 robinson_layout = { version = "0.1.0", path = "crates/robinson_layout" }
 robinson_paint = { version = "0.1.0", path = "crates/robinson_paint" }

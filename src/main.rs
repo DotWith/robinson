@@ -29,7 +29,8 @@ fn main() -> Result<()> {
 
     // Read and parse html
     let html = fs::read_to_string(&args.html)?;
-    let root_node = robinson_html::parse(html);
+    let dom = robinson_dom::Dom::parse(&html).unwrap();
+    let root_node = dom.children.first().unwrap();
 
     // Read and parse css
     let css = fs::read_to_string(&args.css)?;
