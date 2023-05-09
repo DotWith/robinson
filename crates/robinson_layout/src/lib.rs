@@ -66,13 +66,15 @@ impl LayoutBox {
 }
 
 /// Transform a style tree into a layout tree.
-pub fn layout_tree<'a>(node: &Rc<StyledNode>, mut containing_block: Dimensions) -> LayoutBox {
+pub fn layout_tree<'a>(node: &Rc<StyledNode>, containing_block: &mut Dimensions) -> LayoutBox {
+    let og_height = containing_block.content.height;
+
     // The layout algorithm expects the container height to start at 0.
-    // TODO: Save the initial containing block height, for calculating percent heights.
     containing_block.content.height = 0.0;
 
     let mut root_box = build_layout_tree(node);
     root_box.layout(containing_block);
+    containing_block.content.height = og_height;
     root_box
 }
 
@@ -98,7 +100,7 @@ fn build_layout_tree<'a>(style_node: &Rc<StyledNode>) -> LayoutBox {
 
 impl LayoutBox {
     /// Lay out a box and its descendants.
-    fn layout(&mut self, containing_block: Dimensions) {
+    fn layout(&mut self, containing_block: &mut Dimensions) {
         match self.box_type {
             BlockNode(_) => self.layout_block(containing_block),
             InlineNode(_) | AnonymousBlock => {} // TODO
@@ -106,7 +108,7 @@ impl LayoutBox {
     }
 
     /// Lay out a block-level element and its descendants.
-    fn layout_block(&mut self, containing_block: Dimensions) {
+    fn layout_block(&mut self, containing_block: &mut Dimensions) {
         // Child width can depend on parent width, so we need to calculate this box's width before
         // laying out its children.
         self.calculate_block_width(containing_block);
@@ -127,7 +129,7 @@ impl LayoutBox {
     /// http://www.w3.org/TR/CSS2/visudet.html#blockwidth
     ///
     /// Sets the horizontal margin/padding/border dimensions, and the `width`.
-    fn calculate_block_width(&mut self, containing_block: Dimensions) {
+    fn calculate_block_width(&mut self, containing_block: &mut Dimensions) {
         let style = self.get_style_node();
 
         // `width` has initial value `auto`.
@@ -214,7 +216,7 @@ impl LayoutBox {
     /// http://www.w3.org/TR/CSS2/visudet.html#normal-block
     ///
     /// Sets the vertical margin/padding/border dimensions, and the `x`, `y` values.
-    fn calculate_block_position(&mut self, containing_block: Dimensions) {
+    fn calculate_block_position(&mut self, containing_block: &mut Dimensions) {
         let style = self.get_style_node();
 
         // margin, border, and padding have initial value 0.
@@ -258,7 +260,7 @@ impl LayoutBox {
     fn layout_block_children(&mut self) {
         let d = &mut self.dimensions;
         for child in &mut self.children {
-            child.layout(*d);
+            child.layout(d);
             // Increment the height so each child is laid out below the previous one.
             d.content.height = d.content.height + child.dimensions.margin_box().height;
         }

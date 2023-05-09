@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     let stylesheet = robinson_css::parse(css)?;
 
     // Since we don't have an actual window, hard-code the "viewport" size.
-    let viewport = Dimensions {
+    let mut viewport = Dimensions {
         content: Rect {
             width: 800.0,
             height: 600.0,
@@ -48,7 +48,7 @@ fn main() -> Result<()> {
 
     // Rendering
     let style_root = robinson_style::style_tree(&root_node, &stylesheet);
-    let layout_root = robinson_layout::layout_tree(&style_root, viewport);
+    let layout_root = robinson_layout::layout_tree(&style_root, &mut viewport);
 
     let canvas = robinson_paint::paint(&layout_root, viewport.content);
     let (w, h) = (canvas.width as u32, canvas.height as u32);
