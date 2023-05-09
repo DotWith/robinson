@@ -3,7 +3,7 @@
 use robinson_style::{StyledNode, Display};
 use robinson_css::Value::{Keyword, Length};
 use robinson_css::Unit::Px;
-use std::default::Default;
+use std::rc::Rc;
 
 pub use self::BoxType::{AnonymousBlock, InlineNode, BlockNode};
 
@@ -36,19 +36,19 @@ pub struct EdgeSizes {
 }
 
 /// A node in the layout tree.
-pub struct LayoutBox<'a> {
+pub struct LayoutBox {
     pub dimensions: Dimensions,
-    pub box_type: BoxType<'a>,
-    pub children: Vec<LayoutBox<'a>>,
+    pub box_type: BoxType,
+    pub children: Vec<LayoutBox>,
 }
 
-pub enum BoxType<'a> {
-    BlockNode(&'a StyledNode<'a>),
-    InlineNode(&'a StyledNode<'a>),
+pub enum BoxType {
+    BlockNode(Rc<StyledNode>),
+    InlineNode(Rc<StyledNode>),
     AnonymousBlock,
 }
 
-impl<'a> LayoutBox<'a> {
+impl LayoutBox {
     fn new(box_type: BoxType) -> LayoutBox {
         LayoutBox {
             box_type: box_type,
@@ -57,16 +57,16 @@ impl<'a> LayoutBox<'a> {
         }
     }
 
-    fn get_style_node(&self) -> &'a StyledNode<'a> {
-        match self.box_type {
-            BlockNode(node) | InlineNode(node) => node,
+    fn get_style_node(&self) -> &Rc<StyledNode> {
+        match &self.box_type {
+            BlockNode(node) | InlineNode(node) => &node,
             AnonymousBlock => panic!("Anonymous block box has no style node")
         }
     }
 }
 
 /// Transform a style tree into a layout tree.
-pub fn layout_tree<'a>(node: &'a StyledNode<'a>, mut containing_block: Dimensions) -> LayoutBox<'a> {
+pub fn layout_tree<'a>(node: &Rc<StyledNode>, mut containing_block: Dimensions) -> LayoutBox {
     // The layout algorithm expects the container height to start at 0.
     // TODO: Save the initial containing block height, for calculating percent heights.
     containing_block.content.height = 0.0;
@@ -77,16 +77,16 @@ pub fn layout_tree<'a>(node: &'a StyledNode<'a>, mut containing_block: Dimension
 }
 
 /// Build the tree of LayoutBoxes, but don't perform any layout calculations yet.
-fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
+fn build_layout_tree<'a>(style_node: &Rc<StyledNode>) -> LayoutBox {
     // Create the root box.
     let mut root = LayoutBox::new(match style_node.display() {
-        Display::Block => BlockNode(style_node),
-        Display::Inline => InlineNode(style_node),
+        Display::Block => BlockNode(Rc::clone(style_node)),
+        Display::Inline => InlineNode(Rc::clone(style_node)),
         Display::None => panic!("Root node has display: none.")
     });
 
     // Create the descendant boxes.
-    for child in &style_node.children {
+    for child in style_node.children.borrow().iter() {
         match child.display() {
             Display::Block => root.children.push(build_layout_tree(child)),
             Display::Inline => root.get_inline_container().children.push(build_layout_tree(child)),
@@ -96,7 +96,7 @@ fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
     root
 }
 
-impl<'a> LayoutBox<'a> {
+impl LayoutBox {
     /// Lay out a box and its descendants.
     fn layout(&mut self, containing_block: Dimensions) {
         match self.box_type {
@@ -216,20 +216,33 @@ impl<'a> LayoutBox<'a> {
     /// Sets the vertical margin/padding/border dimensions, and the `x`, `y` values.
     fn calculate_block_position(&mut self, containing_block: Dimensions) {
         let style = self.get_style_node();
-        let d = &mut self.dimensions;
 
         // margin, border, and padding have initial value 0.
         let zero = Length(0.0, Px);
 
         // If margin-top or margin-bottom is `auto`, the used value is zero.
-        d.margin.top = style.lookup("margin-top", "margin", &zero).to_px();
-        d.margin.bottom = style.lookup("margin-bottom", "margin", &zero).to_px();
+        let margin = EdgeSizes {
+            top: style.lookup("margin-top", "margin", &zero).to_px(),
+            bottom: style.lookup("margin-bottom", "margin", &zero).to_px(),
+            ..(self.dimensions.margin)
+        };
 
-        d.border.top = style.lookup("border-top-width", "border-width", &zero).to_px();
-        d.border.bottom = style.lookup("border-bottom-width", "border-width", &zero).to_px();
+        let border = EdgeSizes {
+            top: style.lookup("border-top-width", "border-width", &zero).to_px(),
+            bottom: style.lookup("border-bottom-width", "border-width", &zero).to_px(),
+            ..(self.dimensions.border)
+        };
+        let padding = EdgeSizes {
+            top: style.lookup("padding-top", "padding", &zero).to_px(),
+            bottom: style.lookup("padding-bottom", "padding", &zero).to_px(),
+            ..(self.dimensions.padding)
+        };
 
-        d.padding.top = style.lookup("padding-top", "padding", &zero).to_px();
-        d.padding.bottom = style.lookup("padding-bottom", "padding", &zero).to_px();
+        self.dimensions.margin = margin;
+        self.dimensions.border = border;
+        self.dimensions.padding = padding;
+
+        let d = &mut self.dimensions;
 
         d.content.x = containing_block.content.x +
                       d.margin.left + d.border.left + d.padding.left;
@@ -261,8 +274,8 @@ impl<'a> LayoutBox<'a> {
     }
 
     /// Where a new inline child should go.
-    fn get_inline_container(&mut self) -> &mut LayoutBox<'a> {
-        match self.box_type {
+    fn get_inline_container(&mut self) -> &mut LayoutBox {
+        match &self.box_type {
             InlineNode(_) | AnonymousBlock => self,
             BlockNode(_) => {
                 // If we've just generated an anonymous block box, keep using it.

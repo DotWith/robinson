@@ -5,16 +5,16 @@
 
 use robinson_css::{Stylesheet, Rule, Selector, SimpleSelector, Value, Specificity};
 use robinson_dom::{Node, Element};
-use std::collections::HashMap;
+use std::{collections::HashMap, cell::RefCell, rc::Rc};
 
 /// Map from CSS property names to values.
 pub type PropertyMap = HashMap<String, Value>;
 
 /// A node with associated style data.
-pub struct StyledNode<'a> {
-    pub node: &'a Node,
+pub struct StyledNode {
+    pub node: Node,
     pub specified_values: PropertyMap,
-    pub children: Vec<StyledNode<'a>>,
+    pub children: RefCell<Vec<Rc<StyledNode>>>,
 }
 
 #[derive(PartialEq)]
@@ -24,7 +24,7 @@ pub enum Display {
     None,
 }
 
-impl<'a> StyledNode<'a> {
+impl StyledNode {
     /// Return the specified value of a property if it exists, otherwise `None`.
     pub fn value(&self, name: &str) -> Option<Value> {
         self.specified_values.get(name).cloned()
@@ -54,19 +54,19 @@ impl<'a> StyledNode<'a> {
 ///
 /// This finds only the specified values at the moment. Eventually it should be extended to find the
 /// computed values too, including inherited values.
-pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a Stylesheet) -> StyledNode<'a> {
-    StyledNode {
-        node: root,
+pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a Stylesheet) -> Rc<StyledNode> {
+    Rc::new(StyledNode {
+        node: (*root).clone(),
         specified_values: match root {
             Node::Element(elem) => specified_values(elem, stylesheet),
             Node::Text(_) | Node::Comment(_) => HashMap::new()
         },
-        children: if let Some(element) = root.element() {
+        children: RefCell::new(if let Some(element) = root.element() {
             element.children.iter().map(|child| style_tree(child, stylesheet)).collect()
         } else {
             vec![]
-        }
-    }
+        })
+    })
 }
 
 /// Apply styles to a single element, returning the specified styles.
