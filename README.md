@@ -14,4 +14,4 @@ real-world usability, tandards compliance, performance and efficiency, and inter
 - [ ] Implement exporting to PDF
 - [ ] Implement inline layout
 - [ ] Implement text and box painting
-- [ ] Implement resource loading from network or filesystem
+- [X] Implement resource loading from network or filesystem

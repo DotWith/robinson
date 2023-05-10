@@ -1,4 +1,4 @@
-use robinson_layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect};
+use robinson_layout::{BoxType, LayoutBox, Rect};
 use robinson_css::{Value, Color};
 
 pub struct Canvas {
@@ -89,11 +89,12 @@ fn render_borders(list: &mut DisplayList, layout_box: &LayoutBox) {
 /// Return the specified color for CSS property `name`, or None if no color was specified.
 fn get_color(layout_box: &LayoutBox, name: &str) -> Option<Color> {
     match &layout_box.box_type {
-        BlockNode(style) | InlineNode(style) => match style.value(name) {
+        BoxType::BlockNode(style)
+        | BoxType::InlineNode(style)
+        | BoxType::AnonymousBlock(style) => match style.value(name) {
             Some(Value::ColorValue(color)) => Some(color),
             _ => None
         },
-        AnonymousBlock => None
     }
 }
 

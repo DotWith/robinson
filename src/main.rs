@@ -1,11 +1,9 @@
 mod error;
 
-use std::fs;
-use std::path::PathBuf;
-
 use clap::Parser;
 use error::Result;
 use robinson_layout::{Rect, Dimensions};
+use robinson_net::Client;
 
 /// A toy web rendering engine
 #[derive(Parser, Debug)]
@@ -13,27 +11,33 @@ use robinson_layout::{Rect, Dimensions};
 struct Args {
     /// HTML document
     #[arg(long, default_value = "examples/test.html")]
-    html: PathBuf,
+    html: String,
 
     /// CSS stylesheet
     #[arg(long, default_value = "examples/test.css")]
-    css: PathBuf,
+    css: String,
 
     /// Output file
     #[arg(long, default_value = "output.png")]
-    output: PathBuf,
+    output: String,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = Args::parse();
 
+    // Create the network connection.
+    let client = Client::new();
+
     // Read and parse html
-    let html = fs::read_to_string(&args.html)?;
+    let html_url = Client::get_url(&args.html)?;
+    let html = client.get_to_string(html_url).await?;
     let dom = robinson_dom::Dom::parse(&html).unwrap();
     let root_node = dom.children.first().unwrap();
 
     // Read and parse css
-    let css = fs::read_to_string(&args.css)?;
+    let css_url = Client::get_url(&args.css)?;
+    let css = client.get_to_string(css_url).await?;
     let stylesheet = robinson_css::parse(css)?;
 
     // Since we don't have an actual window, hard-code the "viewport" size.

@@ -8,6 +8,7 @@ authors = ["Matt Brubeck <mbrubeck@limpet.net>", "DotWith <dotwith@tutanota.com>
 members = ["crates/*"]
 
 [dependencies]
+robinson_net = { version = "0.1.0", path = "crates/robinson_net" }
 robinson_dom = { version = "0.1.0", path = "crates/robinson_dom" }
 robinson_css = { version = "0.1.0", path = "crates/robinson_css" }
 robinson_layout = { version = "0.1.0", path = "crates/robinson_layout" }
@@ -15,6 +16,8 @@ robinson_paint = { version = "0.1.0", path = "crates/robinson_paint" }
 robinson_style = { version = "0.1.0", path = "crates/robinson_style" }
 
 # other
+num_cpus = "1.15.0"
 clap = { version = "4.2.7", features = ["derive"] }
 image = "0.24.6"
 thiserror = "1.0.40"
+tokio = { version = "1.28.0", features = ["macros", "rt-multi-thread"] }

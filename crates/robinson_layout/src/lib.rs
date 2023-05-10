@@ -5,8 +5,6 @@ use robinson_css::Value::{Keyword, Length};
 use robinson_css::Unit::Px;
 use std::rc::Rc;
 
-pub use self::BoxType::{AnonymousBlock, InlineNode, BlockNode};
-
 // CSS box model. All sizes are in px.
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -45,7 +43,7 @@ pub struct LayoutBox {
 pub enum BoxType {
     BlockNode(Rc<StyledNode>),
     InlineNode(Rc<StyledNode>),
-    AnonymousBlock,
+    AnonymousBlock(Rc<StyledNode>),
 }
 
 impl LayoutBox {
@@ -59,8 +57,9 @@ impl LayoutBox {
 
     fn get_style_node(&self) -> &Rc<StyledNode> {
         match &self.box_type {
-            BlockNode(node) | InlineNode(node) => &node,
-            AnonymousBlock => panic!("Anonymous block box has no style node")
+            BoxType::BlockNode(node)
+            | BoxType::InlineNode(node)
+            | BoxType::AnonymousBlock(node) => &node,
         }
     }
 }
@@ -82,8 +81,8 @@ pub fn layout_tree<'a>(node: &Rc<StyledNode>, containing_block: &mut Dimensions)
 fn build_layout_tree<'a>(style_node: &Rc<StyledNode>) -> LayoutBox {
     // Create the root box.
     let mut root = LayoutBox::new(match style_node.display() {
-        Display::Block => BlockNode(Rc::clone(style_node)),
-        Display::Inline => InlineNode(Rc::clone(style_node)),
+        Display::Block => BoxType::BlockNode(Rc::clone(style_node)),
+        Display::Inline => BoxType::InlineNode(Rc::clone(style_node)),
         Display::None => panic!("Root node has display: none.")
     });
 
@@ -102,8 +101,8 @@ impl LayoutBox {
     /// Lay out a box and its descendants.
     fn layout(&mut self, containing_block: &mut Dimensions) {
         match self.box_type {
-            BlockNode(_) => self.layout_block(containing_block),
-            InlineNode(_) | AnonymousBlock => {} // TODO
+            BoxType::BlockNode(_) => self.layout_block(containing_block),
+            BoxType::InlineNode(_) | BoxType::AnonymousBlock(_) => {},
         }
     }
 
@@ -278,13 +277,16 @@ impl LayoutBox {
     /// Where a new inline child should go.
     fn get_inline_container(&mut self) -> &mut LayoutBox {
         match &self.box_type {
-            InlineNode(_) | AnonymousBlock => self,
-            BlockNode(_) => {
+            BoxType::InlineNode(_) | BoxType::AnonymousBlock(_) => self,
+            BoxType::BlockNode(node) => {
                 // If we've just generated an anonymous block box, keep using it.
-                // Otherwise, create a new one.
-                match self.children.last() {
-                    Some(&LayoutBox { box_type: AnonymousBlock,..}) => {}
-                    _ => self.children.push(LayoutBox::new(AnonymousBlock))
+                let last = self.children.last();
+                let is_anon = match last {
+                    Some(ch) => matches!(ch.box_type, BoxType::AnonymousBlock(_)),
+                    _ => false
+                };
+                if !is_anon {
+                    self.children.push(LayoutBox::new(BoxType::AnonymousBlock(Rc::clone(node))))
                 }
                 self.children.last_mut().unwrap()
             }

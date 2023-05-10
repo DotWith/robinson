@@ -11,4 +11,6 @@ pub enum Error {
     Image(#[from] image::ImageError),
     #[error(transparent)]
     Css(#[from] robinson_css::Error),
+    #[error(transparent)]
+    Net(#[from] robinson_net::Error),
 }
