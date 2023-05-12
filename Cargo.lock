@@ -958,9 +958,9 @@ dependencies = [
 
 [[package]]
 name = "pest-css-parser"
-version = "0.1.0"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4816b4a2d6ed1166b57fb296f287c2126c53db1758caaa9bb689c1991522932f"
+checksum = "2bb1cda391cd50d23520c4b0dad8fce9098f7f2dc5780bff708eddc72264e4c1"
 dependencies = [
  "once_cell",
  "pest",

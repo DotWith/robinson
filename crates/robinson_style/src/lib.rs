@@ -1,4 +1,4 @@
-use robinson_css::{Value, StyleSheet, CssRule, Selector, SimpleSelector, Specificity};
+use robinson_css::{Value, StyleSheet, CssRule, Selector, SimpleSelector, Specificity, NormalRule};
 use robinson_dom::{Node, Element};
 use std::{cell::RefCell, rc::Rc, collections::HashMap};
 
@@ -114,7 +114,7 @@ fn specified_values(elem: &Element, stylesheets: &Vec<StyleSheet>) -> PropertyMa
 }
 
 /// A single CSS rule and the specificity of its most specific matching selector.
-type MatchedRule<'a> = (Specificity, &'a CssRule);
+type MatchedRule<'a> = (Specificity, &'a NormalRule);
 
 /// Find all CSS rules that match the given element.
 fn matching_rules<'a>(elem: &Element, stylesheet: &'a StyleSheet) -> Vec<MatchedRule<'a>> {
@@ -122,14 +122,18 @@ fn matching_rules<'a>(elem: &Element, stylesheet: &'a StyleSheet) -> Vec<Matched
     // documents, it would be more efficient to store the rules in hash tables
     // based on tag name, id, class, etc.
     stylesheet
-        .0
+        .rules
         .iter()
+        .flat_map(|rule| match rule {
+            CssRule::Normal(norm) => Some(norm),
+            _ => None
+        })
         .filter_map(|rule| match_rule(elem, rule).map(|spec| (spec, rule)))
         .collect()
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &Element, rule: &'a CssRule) -> Option<Specificity> {
+fn match_rule<'a>(elem: &Element, rule: &'a NormalRule) -> Option<Specificity> {
     // Find the first (most specific) matching selector.
     rule.selectors
         .iter()

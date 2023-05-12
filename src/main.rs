@@ -1,6 +1,6 @@
 mod error;
 
-use std::{path::Path, fs};
+use std::path::Path;
 
 use clap::Parser;
 use error::Result;
@@ -14,11 +14,11 @@ use robinson_style::StyleTree;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// HTML document
+    /// Website URL
     #[arg(long, default_value = "examples/test.html")]
     website: String,
 
-    /// Output file
+    /// Output directory
     #[arg(long, default_value = "output.png")]
     output: String,
 }
@@ -62,7 +62,6 @@ async fn main() -> Result<()> {
     let mut stylesheets = Vec::new();
     for css in stylesheet_links {
         let css_str = css.to_str().unwrap();
-        println!("CSS: {:#?}", css_str);
         let css = client.get_to_string(client.get_url(&css_str)?).await?;
         let stylesheet = StyleSheet::parse(&css)?;
         stylesheets.push(stylesheet);
