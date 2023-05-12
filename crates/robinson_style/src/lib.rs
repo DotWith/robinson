@@ -3,7 +3,7 @@
 //! This is not very interesting at the moment.  It will get much more
 //! complicated if I add support for compound selectors.
 
-use robinson_css::{Stylesheet, Rule, Selector, SimpleSelector, Value, Specificity};
+use robinson_css::{StyleSheet, CssRule, Selector, SimpleSelector, Value, Specificity};
 use robinson_dom::{Node, Element};
 use std::{collections::HashMap, cell::RefCell, rc::Rc};
 
@@ -54,7 +54,7 @@ impl StyledNode {
 ///
 /// This finds only the specified values at the moment. Eventually it should be extended to find the
 /// computed values too, including inherited values.
-pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a Stylesheet) -> Rc<StyledNode> {
+pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a StyleSheet) -> Rc<StyledNode> {
     Rc::new(StyledNode {
         node: (*root).clone(),
         specified_values: match root {
@@ -72,7 +72,7 @@ pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a Stylesheet) -> Rc<StyledNo
 /// Apply styles to a single element, returning the specified styles.
 ///
 /// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
-fn specified_values(elem: &Element, stylesheet: &Stylesheet) -> PropertyMap {
+fn specified_values(elem: &Element, stylesheet: &StyleSheet) -> PropertyMap {
     let mut values = HashMap::new();
     let mut rules = matching_rules(elem, stylesheet);
 
@@ -80,34 +80,35 @@ fn specified_values(elem: &Element, stylesheet: &Stylesheet) -> PropertyMap {
     rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
     for (_, rule) in rules {
         for declaration in &rule.declarations {
-            values.insert(declaration.name.clone(), declaration.value.clone());
+            values.insert(declaration.0.clone(), declaration.1.clone());
         }
     }
     values
 }
 
 /// A single CSS rule and the specificity of its most specific matching selector.
-type MatchedRule<'a> = (Specificity, &'a Rule);
+type MatchedRule<'a> = (Specificity, &'a CssRule);
 
 /// Find all CSS rules that match the given element.
-fn matching_rules<'a>(elem: &Element, stylesheet: &'a Stylesheet) -> Vec<MatchedRule<'a>> {
+fn matching_rules<'a>(elem: &Element, stylesheet: &'a StyleSheet) -> Vec<MatchedRule<'a>> {
     // For now, we just do a linear scan of all the rules.  For large
     // documents, it would be more efficient to store the rules in hash tables
     // based on tag name, id, class, etc.
-    stylesheet.rules.iter().filter_map(|rule| match_rule(elem, rule)).collect()
+    stylesheet.0.iter().filter_map(|rule| match_rule(elem, rule)).collect()
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &Element, rule: &'a Rule) -> Option<MatchedRule<'a>> {
+fn match_rule<'a>(elem: &Element, rule: &'a CssRule) -> Option<MatchedRule<'a>> {
     // Find the first (most specific) matching selector.
     rule.selectors.iter().find(|selector| matches(elem, *selector))
-        .map(|selector| (selector.specificity(), rule))
+        .map(|selector| (selector.specificity().unwrap(), rule))
 }
 
 /// Selector matching:
 fn matches(elem: &Element, selector: &Selector) -> bool {
     match *selector {
-        Selector::Simple(ref simple_selector) => matches_simple_selector(elem, simple_selector)
+        Selector::Simple(ref simple_selector) => matches_simple_selector(elem, simple_selector),
+        _ => false
     }
 }
 

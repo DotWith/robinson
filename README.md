@@ -18,3 +18,4 @@ real-world usability, tandards compliance, performance and efficiency, and inter
 - [ ] Implement css parsing from the Dom.
 - [ ] Implement multiple style sheets
 - [ ] Implement window for rendering
+- [X] Decrease HTML and CSS loading times

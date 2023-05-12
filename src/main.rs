@@ -2,6 +2,8 @@ mod error;
 
 use clap::Parser;
 use error::Result;
+use robinson_css::StyleSheet;
+use robinson_dom::Dom;
 use robinson_layout::{Rect, Dimensions};
 use robinson_net::Client;
 
@@ -32,13 +34,13 @@ async fn main() -> Result<()> {
     // Read and parse html
     let html_url = Client::get_url(&args.html)?;
     let html = client.get_to_string(html_url).await?;
-    let dom = robinson_dom::Dom::parse(&html).unwrap();
+    let dom = Dom::parse(&html).unwrap();
     let root_node = dom.children.first().unwrap();
 
     // Read and parse css
     let css_url = Client::get_url(&args.css)?;
     let css = client.get_to_string(css_url).await?;
-    let stylesheet = robinson_css::parse(css)?;
+    let stylesheet = StyleSheet::parse(&css)?;
 
     // Since we don't have an actual window, hard-code the "viewport" size.
     let mut viewport = Dimensions {
