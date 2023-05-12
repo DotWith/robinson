@@ -1,5 +1,7 @@
 mod error;
 
+use std::{path::Path, fs};
+
 use clap::Parser;
 use error::Result;
 use robinson_css::StyleSheet;
@@ -14,11 +16,7 @@ use robinson_style::StyleTree;
 struct Args {
     /// HTML document
     #[arg(long, default_value = "examples/test.html")]
-    html: String,
-
-    /// CSS stylesheet
-    #[arg(long, value_delimiter = ',', default_value = "examples/test01.css,examples/test02.css")]
-    stylesheets: Vec<String>,
+    website: String,
 
     /// Output file
     #[arg(long, default_value = "output.png")]
@@ -33,16 +31,39 @@ async fn main() -> Result<()> {
     let client = Client::new();
 
     // Read and parse html
-    let html_url = Client::get_url(&args.html)?;
-    let html = client.get_to_string(html_url).await?;
+    let html = client.get_to_string(client.get_url(&args.website)?).await?;
     let dom = Dom::parse(&html).unwrap();
     let root_node = dom.children.first().unwrap();
 
+    let mut stylesheet_links = Vec::new();
+
+    if let Some(root_element) = root_node.element() {
+        for ele in root_element.children.iter().filter_map(|e| e.element()) {
+            if ele.name == "head" {
+                for eee in ele.children.iter().filter_map(|e| e.element()) {
+                    if eee.name == "link" {
+                        if let Some(_rel) = eee.attributes.get("rel").filter(|&rel| rel == &Some(String::from("stylesheet"))) {
+                            if let Some(href) = eee.attributes.get("href").cloned() {
+                                let css_url = href.unwrap();
+                                let css_path = Path::new(&css_url);
+                                let html_path = Path::new(&args.website);
+                                let html_url = html_path.parent().unwrap();
+                                let connected_path = html_url.join(css_path);
+                                stylesheet_links.push(connected_path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Read and parse css
     let mut stylesheets = Vec::new();
-    for css in args.stylesheets {
-        let css_url = Client::get_url(&css)?;
-        let css = client.get_to_string(css_url).await?;
+    for css in stylesheet_links {
+        let css_str = css.to_str().unwrap();
+        println!("CSS: {:#?}", css_str);
+        let css = client.get_to_string(client.get_url(&css_str)?).await?;
         let stylesheet = StyleSheet::parse(&css)?;
         stylesheets.push(stylesheet);
     }

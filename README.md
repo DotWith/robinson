@@ -15,7 +15,7 @@ real-world usability, tandards compliance, performance and efficiency, and inter
 - [ ] Implement inline layout
 - [ ] Implement text and box painting
 - [X] Implement resource loading from network or filesystem
-- [ ] Implement css parsing from the Dom.
+- [X] Implement css parsing from the Dom.
 - [X] Implement multiple style sheets
 - [ ] Implement window for rendering
 - [X] Decrease HTML and CSS loading times

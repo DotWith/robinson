@@ -17,7 +17,7 @@ impl Client {
         }
     }
 
-    pub fn get_url(path: &str) -> Result<Url, Error> {
+    pub fn get_url(&self, path: &str) -> Result<Url, Error> {
         if path.starts_with("http") {
             let url = Url::parse(path).unwrap();
             Ok(url)
