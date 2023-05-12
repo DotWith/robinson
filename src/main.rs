@@ -6,6 +6,7 @@ use robinson_css::StyleSheet;
 use robinson_dom::Dom;
 use robinson_layout::{Rect, Dimensions};
 use robinson_net::Client;
+use robinson_style::StyleTree;
 
 /// A toy web rendering engine
 #[derive(Parser, Debug)]
@@ -16,8 +17,8 @@ struct Args {
     html: String,
 
     /// CSS stylesheet
-    #[arg(long, default_value = "examples/test.css")]
-    css: String,
+    #[arg(long, value_delimiter = ',', default_value = "examples/test01.css,examples/test02.css")]
+    stylesheets: Vec<String>,
 
     /// Output file
     #[arg(long, default_value = "output.png")]
@@ -38,9 +39,13 @@ async fn main() -> Result<()> {
     let root_node = dom.children.first().unwrap();
 
     // Read and parse css
-    let css_url = Client::get_url(&args.css)?;
-    let css = client.get_to_string(css_url).await?;
-    let stylesheet = StyleSheet::parse(&css)?;
+    let mut stylesheets = Vec::new();
+    for css in args.stylesheets {
+        let css_url = Client::get_url(&css)?;
+        let css = client.get_to_string(css_url).await?;
+        let stylesheet = StyleSheet::parse(&css)?;
+        stylesheets.push(stylesheet);
+    }
 
     // Since we don't have an actual window, hard-code the "viewport" size.
     let mut viewport = Dimensions {
@@ -53,8 +58,8 @@ async fn main() -> Result<()> {
     };
 
     // Rendering
-    let style_root = robinson_style::style_tree(&root_node, &stylesheet);
-    let layout_root = robinson_layout::layout_tree(&style_root, &mut viewport);
+    let style_tree = StyleTree::new(&root_node, &stylesheets);
+    let layout_root = robinson_layout::layout_tree(&style_tree.root.borrow(), &mut viewport);
 
     let canvas = robinson_paint::paint(&layout_root, viewport.content);
     let (w, h) = (canvas.width as u32, canvas.height as u32);

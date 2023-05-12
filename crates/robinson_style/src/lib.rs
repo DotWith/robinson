@@ -1,83 +1,110 @@
-//! Code for applying CSS styles to the DOM.
-//!
-//! This is not very interesting at the moment.  It will get much more
-//! complicated if I add support for compound selectors.
-
-use robinson_css::{StyleSheet, CssRule, Selector, SimpleSelector, Value, Specificity};
+use robinson_css::{Value, StyleSheet, CssRule, Selector, SimpleSelector, Specificity};
 use robinson_dom::{Node, Element};
-use std::{collections::HashMap, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, collections::HashMap};
 
-/// Map from CSS property names to values.
 pub type PropertyMap = HashMap<String, Value>;
 
-/// A node with associated style data.
-pub struct StyledNode {
-    pub node: Node,
-    pub specified_values: PropertyMap,
-    pub children: RefCell<Vec<Rc<StyledNode>>>,
-}
-
-#[derive(PartialEq)]
+#[derive(Debug)]
 pub enum Display {
-    Inline,
     Block,
+    Inline,
+    InlineBlock,
+    Table,
+    TableRowGroup,
+    TableRow,
+    TableCell,
+    ListItem,
     None,
 }
 
-impl StyledNode {
-    /// Return the specified value of a property if it exists, otherwise `None`.
-    pub fn value(&self, name: &str) -> Option<Value> {
+#[derive(Debug)]
+pub struct StyleNode {
+    pub node: Node,
+    pub specified_values: PropertyMap,
+    pub children: RefCell<Vec<Rc<StyleNode>>>,
+}
+
+#[derive(Debug)]
+pub struct StyleTree {
+    pub root: RefCell<Rc<StyleNode>>,
+}
+
+impl StyleNode {
+    pub fn new(node: &Node, stylesheets: &Vec<StyleSheet>) -> Rc<Self> {
+        Rc::new(Self {
+            node: node.clone(),
+            specified_values: match node {
+                Node::Element(elem) => specified_values(elem, stylesheets),
+                Node::Text(_) | Node::Comment(_) => HashMap::new()
+            },
+            children: RefCell::new(node
+                .element()
+                .map(|element| {
+                    element
+                        .children
+                        .iter()
+                        .map(|child| Self::new(child, stylesheets))
+                        .collect()
+                })
+                .unwrap_or_else(Vec::new),
+            ),
+        })
+    }
+
+    pub fn get_value(&self, name: &str) -> Option<Value> {
         self.specified_values.get(name).cloned()
     }
 
-    /// Return the specified value of property `name`, or property `fallback_name` if that doesn't
-    /// exist, or value `default` if neither does.
     pub fn lookup(&self, name: &str, fallback_name: &str, default: &Value) -> Value {
-        self.value(name).unwrap_or_else(|| self.value(fallback_name)
-                        .unwrap_or_else(|| default.clone()))
+        self.get_value(name)
+            .or_else(|| self.get_value(fallback_name))
+            .clone()
+            .unwrap_or_else(|| default.clone())
     }
 
-    /// The value of the `display` property (defaults to inline).
     pub fn display(&self) -> Display {
-        match self.value("display") {
-            Some(Value::Keyword(s)) => match &*s {
-                "block" => Display::Block,
-                "none" => Display::None,
-                _ => Display::Inline
-            },
-            _ => Display::Inline
+        if matches!(self.node, Node::Text(_)) {
+            return Display::Inline;
+        }
+
+        self.get_value("display")
+            .and_then(|value| match value {
+                Value::Keyword(s) => Some(match &*s {
+                    "block" => Display::Block,
+                    "none" => Display::None,
+                    "inline-block" => Display::InlineBlock,
+                    "table" => Display::Table,
+                    "table-row-group" => Display::TableRowGroup,
+                    "table-row" => Display::TableRow,
+                    "table-cell" => Display::TableCell,
+                    "list-item" => Display::ListItem,
+                    _ => Display::Inline,
+                }),
+                _ => None
+            })
+            .unwrap_or(Display::Inline)
+    }
+}
+
+impl StyleTree {
+    pub fn new(node: &Node, stylesheets: &Vec<StyleSheet>) -> Self {
+        Self {
+            root: RefCell::new(StyleNode::new(node, stylesheets))
         }
     }
 }
 
-/// Apply a stylesheet to an entire DOM tree, returning a StyledNode tree.
-///
-/// This finds only the specified values at the moment. Eventually it should be extended to find the
-/// computed values too, including inherited values.
-pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a StyleSheet) -> Rc<StyledNode> {
-    Rc::new(StyledNode {
-        node: (*root).clone(),
-        specified_values: match root {
-            Node::Element(elem) => specified_values(elem, stylesheet),
-            Node::Text(_) | Node::Comment(_) => HashMap::new()
-        },
-        children: RefCell::new(if let Some(element) = root.element() {
-            element.children.iter().map(|child| style_tree(child, stylesheet)).collect()
-        } else {
-            vec![]
-        })
-    })
-}
-
 /// Apply styles to a single element, returning the specified styles.
-///
-/// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
-fn specified_values(elem: &Element, stylesheet: &StyleSheet) -> PropertyMap {
+fn specified_values(elem: &Element, stylesheets: &Vec<StyleSheet>) -> PropertyMap {
     let mut values = HashMap::new();
-    let mut rules = matching_rules(elem, stylesheet);
+    let mut rules = Vec::new();
+    for stylesheet in stylesheets {
+        rules.extend(matching_rules(elem, stylesheet));
+    }
 
-    // Go through the rules from lowest to highest specificity.
-    rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
+    // Sort the matched rules by specificity, highest to lowest.
+    rules.sort_by(|&(a, _), &(b, _)| b.cmp(&a));
+
     for (_, rule) in rules {
         for declaration in &rule.declarations {
             values.insert(declaration.0.clone(), declaration.1.clone());
@@ -94,21 +121,26 @@ fn matching_rules<'a>(elem: &Element, stylesheet: &'a StyleSheet) -> Vec<Matched
     // For now, we just do a linear scan of all the rules.  For large
     // documents, it would be more efficient to store the rules in hash tables
     // based on tag name, id, class, etc.
-    stylesheet.0.iter().filter_map(|rule| match_rule(elem, rule)).collect()
+    stylesheet
+        .0
+        .iter()
+        .filter_map(|rule| match_rule(elem, rule).map(|spec| (spec, rule)))
+        .collect()
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &Element, rule: &'a CssRule) -> Option<MatchedRule<'a>> {
+fn match_rule<'a>(elem: &Element, rule: &'a CssRule) -> Option<Specificity> {
     // Find the first (most specific) matching selector.
-    rule.selectors.iter().find(|selector| matches(elem, *selector))
-        .map(|selector| (selector.specificity().unwrap(), rule))
+    rule.selectors
+        .iter()
+        .find(|selector| matches(elem, *selector))
+        .map(|selector| selector.specificity().unwrap())
 }
 
 /// Selector matching:
 fn matches(elem: &Element, selector: &Selector) -> bool {
     match *selector {
-        Selector::Simple(ref simple_selector) => matches_simple_selector(elem, simple_selector),
-        _ => false
+        Selector::Simple(ref simple_selector) => matches_simple_selector(elem, simple_selector)
     }
 }
 

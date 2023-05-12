@@ -1,6 +1,6 @@
 ///! Basic CSS block layout.
 
-use robinson_style::{StyledNode, Display};
+use robinson_style::{StyleNode, Display};
 use robinson_css::Value::{Keyword, Length};
 use robinson_css::Unit::Px;
 use std::rc::Rc;
@@ -41,9 +41,9 @@ pub struct LayoutBox {
 }
 
 pub enum BoxType {
-    BlockNode(Rc<StyledNode>),
-    InlineNode(Rc<StyledNode>),
-    AnonymousBlock(Rc<StyledNode>),
+    BlockNode(Rc<StyleNode>),
+    InlineNode(Rc<StyleNode>),
+    AnonymousBlock(Rc<StyleNode>),
 }
 
 impl LayoutBox {
@@ -55,7 +55,7 @@ impl LayoutBox {
         }
     }
 
-    fn get_style_node(&self) -> &Rc<StyledNode> {
+    fn get_style_node(&self) -> &Rc<StyleNode> {
         match &self.box_type {
             BoxType::BlockNode(node)
             | BoxType::InlineNode(node)
@@ -65,7 +65,7 @@ impl LayoutBox {
 }
 
 /// Transform a style tree into a layout tree.
-pub fn layout_tree<'a>(node: &Rc<StyledNode>, containing_block: &mut Dimensions) -> LayoutBox {
+pub fn layout_tree<'a>(node: &Rc<StyleNode>, containing_block: &mut Dimensions) -> LayoutBox {
     let og_height = containing_block.content.height;
 
     // The layout algorithm expects the container height to start at 0.
@@ -78,12 +78,12 @@ pub fn layout_tree<'a>(node: &Rc<StyledNode>, containing_block: &mut Dimensions)
 }
 
 /// Build the tree of LayoutBoxes, but don't perform any layout calculations yet.
-fn build_layout_tree<'a>(style_node: &Rc<StyledNode>) -> LayoutBox {
+fn build_layout_tree<'a>(style_node: &Rc<StyleNode>) -> LayoutBox {
     // Create the root box.
     let mut root = LayoutBox::new(match style_node.display() {
         Display::Block => BoxType::BlockNode(Rc::clone(style_node)),
         Display::Inline => BoxType::InlineNode(Rc::clone(style_node)),
-        Display::None => panic!("Root node has display: none.")
+        _ => panic!("Root node has display: none.")
     });
 
     // Create the descendant boxes.
@@ -91,7 +91,7 @@ fn build_layout_tree<'a>(style_node: &Rc<StyledNode>) -> LayoutBox {
         match child.display() {
             Display::Block => root.children.push(build_layout_tree(child)),
             Display::Inline => root.get_inline_container().children.push(build_layout_tree(child)),
-            Display::None => {} // Don't lay out nodes with `display: none;`
+            _ => {} // Don't lay out nodes with `display: none;`
         }
     }
     root
@@ -133,7 +133,7 @@ impl LayoutBox {
 
         // `width` has initial value `auto`.
         let auto = Keyword("auto".to_string());
-        let mut width = style.value("width").unwrap_or(auto.clone());
+        let mut width = style.get_value("width").unwrap_or(auto.clone());
 
         // margin, border, and padding have initial value 0.
         let zero = Length(0.0, Px);
@@ -269,7 +269,7 @@ impl LayoutBox {
     fn calculate_block_height(&mut self) {
         // If the height is set to an explicit length, use that exact length.
         // Otherwise, just keep the value set by `layout_block_children`.
-        if let Some(Length(h, Px)) = self.get_style_node().value("height") {
+        if let Some(Length(h, Px)) = self.get_style_node().get_value("height") {
             self.dimensions.content.height = h;
         }
     }

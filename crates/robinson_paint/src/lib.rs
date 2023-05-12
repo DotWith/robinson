@@ -91,7 +91,7 @@ fn get_color(layout_box: &LayoutBox, name: &str) -> Option<Color> {
     match &layout_box.box_type {
         BoxType::BlockNode(style)
         | BoxType::InlineNode(style)
-        | BoxType::AnonymousBlock(style) => match style.value(name) {
+        | BoxType::AnonymousBlock(style) => match style.get_value(name) {
             Some(Value::Color(color)) => Some(color),
             _ => None
         },
