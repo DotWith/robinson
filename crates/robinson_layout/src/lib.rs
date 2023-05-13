@@ -49,7 +49,7 @@ pub enum BoxType {
 impl LayoutBox {
     fn new(box_type: BoxType) -> LayoutBox {
         LayoutBox {
-            box_type: box_type,
+            box_type,
             dimensions: Default::default(),
             children: Vec::new(),
         }
@@ -59,13 +59,13 @@ impl LayoutBox {
         match &self.box_type {
             BoxType::BlockNode(node)
             | BoxType::InlineNode(node)
-            | BoxType::AnonymousBlock(node) => &node,
+            | BoxType::AnonymousBlock(node) => node,
         }
     }
 }
 
 /// Transform a style tree into a layout tree.
-pub fn layout_tree<'a>(node: &Rc<StyleNode>, containing_block: &mut Dimensions) -> LayoutBox {
+pub fn layout_tree(node: &Rc<StyleNode>, containing_block: &mut Dimensions) -> LayoutBox {
     let og_height = containing_block.content.height;
 
     // The layout algorithm expects the container height to start at 0.
@@ -78,7 +78,7 @@ pub fn layout_tree<'a>(node: &Rc<StyleNode>, containing_block: &mut Dimensions) 
 }
 
 /// Build the tree of LayoutBoxes, but don't perform any layout calculations yet.
-fn build_layout_tree<'a>(style_node: &Rc<StyleNode>) -> LayoutBox {
+fn build_layout_tree(style_node: &Rc<StyleNode>) -> LayoutBox {
     // Create the root box.
     let mut root = LayoutBox::new(match style_node.display() {
         Display::Block => BoxType::BlockNode(Rc::clone(style_node)),
@@ -261,7 +261,7 @@ impl LayoutBox {
         for child in &mut self.children {
             child.layout(d);
             // Increment the height so each child is laid out below the previous one.
-            d.content.height = d.content.height + child.dimensions.margin_box().height;
+            d.content.height += child.dimensions.margin_box().height;
         }
     }
 

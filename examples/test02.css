@@ -1,13 +1,13 @@
 .outer {
-    background: #00ccff;
-    border-color: #666666;
+    background: cyan;
+    border-color: gray;
     border-width: 2px;
     margin: 50px;
     padding: 50px;
 }
 
 .inner {
-    border-color: #cc0000;
+    border-color: darkred;
     border-width: 4px;
     height: 100px;
     margin-bottom: 20px;
@@ -15,7 +15,7 @@
 }
 
 .inner#bye {
-    background: #ffff00;
+    background: yellow;
 }
 
 span#name {

@@ -4,19 +4,12 @@ use reqwest::Url;
 
 use crate::Error;
 
+#[derive(Default)]
 pub struct Client {
     client: reqwest::Client,
 }
 
 impl Client {
-    pub fn new() -> Self {
-        let client = reqwest::Client::new();
-
-        Self {
-            client,
-        }
-    }
-
     pub fn get_url(&self, path: &str) -> Result<Url, Error> {
         if path.starts_with("http") {
             let url = Url::parse(path).unwrap();

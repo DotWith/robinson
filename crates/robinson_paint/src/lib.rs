@@ -2,19 +2,9 @@ use robinson_layout::{BoxType, LayoutBox, Rect};
 use robinson_css::{Value, Color};
 
 pub struct Canvas {
-    pub pixels: Vec<Color>,
+    pub layout: LayoutBox,
     pub width: usize,
     pub height: usize,
-}
-
-/// Paint a tree of LayoutBoxes to an array of pixels.
-pub fn paint(layout_root: &LayoutBox, bounds: Rect) -> Canvas {
-    let display_list = build_display_list(layout_root);
-    let mut canvas = Canvas::new(bounds.width as usize, bounds.height as usize);
-    for item in display_list {
-        canvas.paint_item(&item);
-    }
-    canvas
 }
 
 #[derive(Debug)]
@@ -23,6 +13,41 @@ pub enum DisplayCommand {
 }
 
 pub type DisplayList = Vec<DisplayCommand>;
+
+impl Canvas {
+    pub fn new(layout: LayoutBox, width: usize, height: usize) -> Self {
+        Self { layout, width, height }
+    }
+
+    pub fn get_pixels(&mut self) -> Vec<Color> {
+        let white = Color::from_hex("#ffffff");
+        let mut pixels = vec![white; self.width * self.height];
+        let display_list = build_display_list(&self.layout);
+        for item in display_list {
+            self.paint_item(&mut pixels, &item);
+        }
+        pixels
+    }
+
+    fn paint_item(&mut self, pixels: &mut [Color], item: &DisplayCommand) {
+        match *item {
+            DisplayCommand::SolidColor(color, rect) => {
+                // Clip the rectangle to the canvas boundaries.
+                let x0 = rect.x.clamp(0.0, self.width as f32) as usize;
+                let y0 = rect.y.clamp(0.0, self.height as f32) as usize;
+                let x1 = (rect.x + rect.width).clamp(0.0, self.width as f32) as usize;
+                let y1 = (rect.y + rect.height).clamp(0.0, self.height as f32) as usize;
+
+                for y in y0 .. y1 {
+                    for x in x0 .. x1 {
+                        // TODO: alpha compositing with existing pixel
+                        pixels[y * self.width + x] = color;
+                    }
+                }
+            }
+        }
+    }
+}
 
 pub fn build_display_list(layout_root: &LayoutBox) -> DisplayList {
     let mut list = Vec::new();
@@ -95,45 +120,5 @@ fn get_color(layout_box: &LayoutBox, name: &str) -> Option<Color> {
             Some(Value::Color(color)) => Some(color),
             _ => None
         },
-    }
-}
-
-impl Canvas {
-    /// Create a blank canvas
-    fn new(width: usize, height: usize) -> Canvas {
-        let white = Color { r: 255, g: 255, b: 255, a: 255 };
-        Canvas {
-            pixels: vec![white; width * height],
-            width: width,
-            height: height,
-        }
-    }
-
-    fn paint_item(&mut self, item: &DisplayCommand) {
-        match *item {
-            DisplayCommand::SolidColor(color, rect) => {
-                // Clip the rectangle to the canvas boundaries.
-                let x0 = rect.x.clamp(0.0, self.width as f32) as usize;
-                let y0 = rect.y.clamp(0.0, self.height as f32) as usize;
-                let x1 = (rect.x + rect.width).clamp(0.0, self.width as f32) as usize;
-                let y1 = (rect.y + rect.height).clamp(0.0, self.height as f32) as usize;
-
-                for y in y0 .. y1 {
-                    for x in x0 .. x1 {
-                        // TODO: alpha compositing with existing pixel
-                        self.pixels[y * self.width + x] = color;
-                    }
-                }
-            }
-        }
-    }
-}
-
-trait Clamp {
-    fn clamp(self, lower: Self, upper: Self) -> Self;
-}
-impl Clamp for f32 {
-    fn clamp(self, lower: f32, upper: f32) -> f32 {
-        self.max(lower).min(upper)
     }
 }

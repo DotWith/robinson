@@ -8,6 +8,7 @@ use robinson_css::StyleSheet;
 use robinson_dom::Dom;
 use robinson_layout::{Rect, Dimensions};
 use robinson_net::Client;
+use robinson_paint::Canvas;
 use robinson_style::StyleTree;
 
 /// A toy web rendering engine
@@ -28,7 +29,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Create the network connection.
-    let client = Client::new();
+    let client = Client::default();
 
     // Read and parse html
     let html = client.get_to_string(client.get_url(&args.website)?).await?;
@@ -62,7 +63,7 @@ async fn main() -> Result<()> {
     let mut stylesheets = Vec::new();
     for css in stylesheet_links {
         let css_str = css.to_str().unwrap();
-        let css = client.get_to_string(client.get_url(&css_str)?).await?;
+        let css = client.get_to_string(client.get_url(css_str)?).await?;
         let stylesheet = StyleSheet::parse(&css)?;
         stylesheets.push(stylesheet);
     }
@@ -78,13 +79,14 @@ async fn main() -> Result<()> {
     };
 
     // Rendering
-    let style_tree = StyleTree::new(&root_node, &stylesheets);
+    let style_tree = StyleTree::new(root_node, &stylesheets);
     let layout_root = robinson_layout::layout_tree(&style_tree.root.borrow(), &mut viewport);
 
-    let canvas = robinson_paint::paint(&layout_root, viewport.content);
+    let mut canvas = Canvas::new(layout_root, viewport.content.width as usize, viewport.content.height as usize);
+    let pixels = canvas.get_pixels();
     let (w, h) = (canvas.width as u32, canvas.height as u32);
     let imgbuf = image::ImageBuffer::from_fn(w, h, move |x, y| {
-        let color = canvas.pixels[(y * w + x) as usize];
+        let color = pixels[(y * w + x) as usize];
         image::Rgba([color.r, color.g, color.b, color.a])
     });
     imgbuf.save(&args.output)?;

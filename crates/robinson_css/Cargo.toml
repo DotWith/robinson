@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-pest-css-parser = "0.1.5"
+pest-css-parser = "0.1.6"

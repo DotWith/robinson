@@ -58,7 +58,6 @@ impl StyleNode {
     pub fn lookup(&self, name: &str, fallback_name: &str, default: &Value) -> Value {
         self.get_value(name)
             .or_else(|| self.get_value(fallback_name))
-            .clone()
             .unwrap_or_else(|| default.clone())
     }
 
@@ -133,11 +132,11 @@ fn matching_rules<'a>(elem: &Element, stylesheet: &'a StyleSheet) -> Vec<Matched
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &Element, rule: &'a NormalRule) -> Option<Specificity> {
+fn match_rule(elem: &Element, rule: &NormalRule) -> Option<Specificity> {
     // Find the first (most specific) matching selector.
     rule.selectors
         .iter()
-        .find(|selector| matches(elem, *selector))
+        .find(|selector| matches(elem, selector))
         .map(|selector| selector.specificity().unwrap())
 }
 
