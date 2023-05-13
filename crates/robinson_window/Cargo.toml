@@ -1,0 +1,15 @@
+[package]
+name = "robinson_window"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+robinson_css = { version = "0.1.0", path = "../robinson_css" }
+robinson_dom = { version = "0.1.0", path = "../robinson_dom" }
+robinson_layout = { version = "0.1.0", path = "../robinson_layout" }
+robinson_style = { version = "0.1.0", path = "../robinson_style" }
+robinson_paint = { version = "0.1.0", path = "../robinson_paint" }
+
+# other
+cgmath = "0.18.0"
+glium = "0.32.1"
