@@ -16,10 +16,6 @@ struct Args {
     /// Website URL
     #[arg(long, default_value = "examples/test.html")]
     website: String,
-
-    /// Output directory
-    #[arg(long, default_value = "output.png")]
-    output: String,
 }
 
 #[tokio::main]
