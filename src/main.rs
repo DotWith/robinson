@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     }
 
     // Render to window
-    create_window("Robinson", root_node, &stylesheets);
+    create_window("Robinson", root_node, &stylesheets).await;
 
     Ok(())
 }

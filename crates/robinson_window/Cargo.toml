@@ -11,5 +11,7 @@ robinson_style = { version = "0.1.0", path = "../robinson_style" }
 robinson_paint = { version = "0.1.0", path = "../robinson_paint" }
 
 # other
+winit = "0.28.6"
+wgpu = "0.16.0"
 glam = "0.24.0"
-glium = "0.32.1"
+bytemuck = { version = "1.13.1", features = ["derive"] }
