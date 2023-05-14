@@ -1,8 +1,8 @@
-use robinson_css::{Color, Value};
-use robinson_layout::{BoxType, LayoutBox, Rect};
+use robinson_css::Color;
+use robinson_layout::{Rect, RenderTree, RenderBox, RenderBlockBox};
 
 pub struct Canvas {
-    pub layout: LayoutBox,
+    pub render_tree: RenderTree,
     pub width: usize,
     pub height: usize,
 }
@@ -15,9 +15,9 @@ pub struct SolidColor {
 pub type DisplayList = Vec<SolidColor>;
 
 impl Canvas {
-    pub fn new(layout: LayoutBox, width: usize, height: usize) -> Self {
+    pub fn new(render_tree: RenderTree, width: usize, height: usize) -> Self {
         Self {
-            layout,
+            render_tree,
             width,
             height,
         }
@@ -26,7 +26,7 @@ impl Canvas {
     pub fn get_pixels(&mut self) -> Vec<Color> {
         let white = Color::from_hex("#ffffff");
         let mut pixels = vec![white; self.width * self.height];
-        let display_list = build_display_list(&self.layout);
+        let display_list = build_display_list(&self.render_tree.root);
         for item in display_list {
             self.paint_item(&mut pixels, &item);
         }
@@ -49,36 +49,35 @@ impl Canvas {
     }
 }
 
-pub fn build_display_list(layout_root: &LayoutBox) -> DisplayList {
+pub fn build_display_list(render_box: &RenderBox) -> DisplayList {
     let mut list = Vec::new();
-    render_layout_box(&mut list, layout_root);
+    render_layout_box(&mut list, render_box);
     list
 }
 
-fn render_layout_box(list: &mut DisplayList, layout_box: &LayoutBox) {
-    render_background(list, layout_box);
-    render_borders(list, layout_box);
-    for child in &layout_box.children {
-        render_layout_box(list, child);
+fn render_layout_box(list: &mut DisplayList, render_box: &RenderBox) {
+    if let RenderBox::Block(block) = render_box {
+        make_background(list, block);
+        if let Some(color) = block.border_color {
+            make_border(list, block, color);
+        }
+        for child in &block.children {
+            render_layout_box(list, child);
+        }
     }
 }
 
-fn render_background(list: &mut DisplayList, layout_box: &LayoutBox) {
-    if let Some(color) = get_color(layout_box, "background") {
+fn make_background(list: &mut DisplayList, render_block: &RenderBlockBox) {
+    if let Some(color) = render_block.background_color {
         list.push(SolidColor {
             color,
-            rect: layout_box.dimensions.border_box(),
+            rect: render_block.dimensions.border_box(),
         });
     }
 }
 
-fn render_borders(list: &mut DisplayList, layout_box: &LayoutBox) {
-    let color = match get_color(layout_box, "border-color") {
-        Some(color) => color,
-        _ => return,
-    };
-
-    let d = &layout_box.dimensions;
+fn make_border(list: &mut DisplayList, render_block: &RenderBlockBox, color: Color) {
+    let d = &render_block.dimensions;
     let border_box = d.border_box();
 
     // Left border
@@ -124,16 +123,4 @@ fn render_borders(list: &mut DisplayList, layout_box: &LayoutBox) {
             height: d.border.bottom,
         },
     });
-}
-
-/// Return the specified color for CSS property `name`, or None if no color was specified.
-fn get_color(layout_box: &LayoutBox, name: &str) -> Option<Color> {
-    match &layout_box.box_type {
-        BoxType::BlockNode(style) | BoxType::InlineNode(style) | BoxType::AnonymousBlock(style) => {
-            match style.get_value(name) {
-                Some(Value::Color(color)) => Some(color),
-                _ => None,
-            }
-        }
-    }
 }

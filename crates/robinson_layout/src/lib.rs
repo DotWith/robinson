@@ -5,6 +5,10 @@ use robinson_css::Value::{Keyword, Length};
 use robinson_css::Unit::Px;
 use std::rc::Rc;
 
+pub use render::*;
+
+mod render;
+
 // CSS box model. All sizes are in px.
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -64,19 +68,6 @@ impl LayoutBox {
     }
 }
 
-/// Transform a style tree into a layout tree.
-pub fn layout_tree(node: &Rc<StyleNode>, containing_block: &mut Dimensions) -> LayoutBox {
-    let og_height = containing_block.content.height;
-
-    // The layout algorithm expects the container height to start at 0.
-    containing_block.content.height = 0.0;
-
-    let mut root_box = build_layout_tree(node);
-    root_box.layout(containing_block);
-    containing_block.content.height = og_height;
-    root_box
-}
-
 /// Build the tree of LayoutBoxes, but don't perform any layout calculations yet.
 fn build_layout_tree(style_node: &Rc<StyleNode>) -> LayoutBox {
     // Create the root box.
@@ -99,15 +90,16 @@ fn build_layout_tree(style_node: &Rc<StyleNode>) -> LayoutBox {
 
 impl LayoutBox {
     /// Lay out a box and its descendants.
-    fn layout(&mut self, containing_block: &mut Dimensions) {
+    fn layout(&mut self, containing_block: &mut Dimensions) -> RenderBox {
         match self.box_type {
-            BoxType::BlockNode(_) => self.layout_block(containing_block),
-            BoxType::InlineNode(_) | BoxType::AnonymousBlock(_) => {},
+            BoxType::BlockNode(_) => RenderBox::Block(self.layout_block(containing_block)),
+            BoxType::InlineNode(_) => RenderBox::Inline,
+            BoxType::AnonymousBlock(_) => RenderBox::Anonymous,
         }
     }
 
     /// Lay out a block-level element and its descendants.
-    fn layout_block(&mut self, containing_block: &mut Dimensions) {
+    fn layout_block(&mut self, containing_block: &mut Dimensions) -> RenderBlockBox {
         // Child width can depend on parent width, so we need to calculate this box's width before
         // laying out its children.
         self.calculate_block_width(containing_block);
@@ -116,11 +108,32 @@ impl LayoutBox {
         self.calculate_block_position(containing_block);
 
         // Recursively lay out the children of this box.
-        self.layout_block_children();
+        let children = self.layout_block_children();
 
         // Parent height can depend on child height, so `calculate_height` must be called after the
         // children are laid out.
         self.calculate_block_height();
+
+        let zero = Length(0.0, Px);
+        let style = self.get_style_node();
+
+        RenderBlockBox {
+            dimensions: Dimensions {
+                border: EdgeSizes {
+                    top: style.lookup_with_fallback("border-top-width", "border-width", &zero).to_px(),
+                    bottom: style.lookup_with_fallback("border-bottom-width", "border-width", &zero).to_px(),
+                    left: style.lookup_with_fallback("border-left-width", "border-width", &zero).to_px(),
+                    right: style.lookup_with_fallback("border-bottom-right", "border-width", &zero).to_px(),
+                },
+                ..self.dimensions
+            },
+
+            color: style.get_color("color"),
+            background_color: style.get_color("background"),
+            border_color: style.get_color("border-color"),
+
+            children,
+        }
     }
 
     /// Calculate the width of a block-level non-replaced element in normal flow.
@@ -138,14 +151,14 @@ impl LayoutBox {
         // margin, border, and padding have initial value 0.
         let zero = Length(0.0, Px);
 
-        let mut margin_left = style.lookup("margin-left", "margin", &zero);
-        let mut margin_right = style.lookup("margin-right", "margin", &zero);
+        let mut margin_left = style.lookup_with_fallback("margin-left", "margin", &zero);
+        let mut margin_right = style.lookup_with_fallback("margin-right", "margin", &zero);
 
-        let border_left = style.lookup("border-left-width", "border-width", &zero);
-        let border_right = style.lookup("border-right-width", "border-width", &zero);
+        let border_left = style.lookup_with_fallback("border-left-width", "border-width", &zero);
+        let border_right = style.lookup_with_fallback("border-right-width", "border-width", &zero);
 
-        let padding_left = style.lookup("padding-left", "padding", &zero);
-        let padding_right = style.lookup("padding-right", "padding", &zero);
+        let padding_left = style.lookup_with_fallback("padding-left", "padding", &zero);
+        let padding_right = style.lookup_with_fallback("padding-right", "padding", &zero);
 
         let total = sum([&margin_left, &margin_right, &border_left, &border_right,
                          &padding_left, &padding_right, &width].iter().map(|v| v.to_px()));
@@ -223,19 +236,19 @@ impl LayoutBox {
 
         // If margin-top or margin-bottom is `auto`, the used value is zero.
         let margin = EdgeSizes {
-            top: style.lookup("margin-top", "margin", &zero).to_px(),
-            bottom: style.lookup("margin-bottom", "margin", &zero).to_px(),
+            top: style.lookup_with_fallback("margin-top", "margin", &zero).to_px(),
+            bottom: style.lookup_with_fallback("margin-bottom", "margin", &zero).to_px(),
             ..(self.dimensions.margin)
         };
 
         let border = EdgeSizes {
-            top: style.lookup("border-top-width", "border-width", &zero).to_px(),
-            bottom: style.lookup("border-bottom-width", "border-width", &zero).to_px(),
+            top: style.lookup_with_fallback("border-top-width", "border-width", &zero).to_px(),
+            bottom: style.lookup_with_fallback("border-bottom-width", "border-width", &zero).to_px(),
             ..(self.dimensions.border)
         };
         let padding = EdgeSizes {
-            top: style.lookup("padding-top", "padding", &zero).to_px(),
-            bottom: style.lookup("padding-bottom", "padding", &zero).to_px(),
+            top: style.lookup_with_fallback("padding-top", "padding", &zero).to_px(),
+            bottom: style.lookup_with_fallback("padding-bottom", "padding", &zero).to_px(),
             ..(self.dimensions.padding)
         };
 
@@ -256,13 +269,16 @@ impl LayoutBox {
     /// Lay out the block's children within its content area.
     ///
     /// Sets `self.dimensions.height` to the total content height.
-    fn layout_block_children(&mut self) {
+    fn layout_block_children(&mut self) -> Vec<RenderBox> {
+        let mut children = Vec::new();
         let d = &mut self.dimensions;
         for child in &mut self.children {
-            child.layout(d);
+            let render_box = child.layout(d);
             // Increment the height so each child is laid out below the previous one.
             d.content.height += child.dimensions.margin_box().height;
+            children.push(render_box);
         }
+        children
     }
 
     /// Height of a block-level non-replaced element in normal flow with overflow visible.

@@ -11,5 +11,5 @@ robinson_style = { version = "0.1.0", path = "../robinson_style" }
 robinson_paint = { version = "0.1.0", path = "../robinson_paint" }
 
 # other
-cgmath = "0.18.0"
+glam = "0.24.0"
 glium = "0.32.1"

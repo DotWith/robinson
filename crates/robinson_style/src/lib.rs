@@ -1,4 +1,4 @@
-use robinson_css::{Value, StyleSheet, CssRule, Selector, SimpleSelector, Specificity, NormalRule};
+use robinson_css::{Value, StyleSheet, CssRule, Selector, SimpleSelector, Specificity, NormalRule, Color};
 use robinson_dom::{Node, Element};
 use std::{cell::RefCell, rc::Rc, collections::HashMap};
 
@@ -55,7 +55,12 @@ impl StyleNode {
         self.specified_values.get(name).cloned()
     }
 
-    pub fn lookup(&self, name: &str, fallback_name: &str, default: &Value) -> Value {
+    pub fn lookup(&self, name: &str, default: &Value) -> Value {
+        self.get_value(name)
+            .unwrap_or_else(|| default.clone())
+    }
+
+    pub fn lookup_with_fallback(&self, name: &str, fallback_name: &str, default: &Value) -> Value {
         self.get_value(name)
             .or_else(|| self.get_value(fallback_name))
             .unwrap_or_else(|| default.clone())
@@ -82,6 +87,14 @@ impl StyleNode {
                 _ => None
             })
             .unwrap_or(Display::Inline)
+    }
+
+    pub fn get_color(&self, name: &str) -> Option<Color> {
+        self.get_value(name)
+            .and_then(|value| match value {
+                Value::Color(color) => Some(color),
+                _ => None
+            })
     }
 }
 

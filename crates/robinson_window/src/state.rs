@@ -1,11 +1,11 @@
-use cgmath::{Matrix4, Vector3};
+use glam::{Mat4, Vec3};
 use glium::{
     glutin::dpi::PhysicalSize, implement_vertex, index::NoIndices, uniform, Display, Program,
     Surface, VertexBuffer,
 };
 use robinson_css::StyleSheet;
 use robinson_dom::Node;
-use robinson_layout::{Dimensions, Rect};
+use robinson_layout::{Dimensions, Rect, RenderTree};
 use robinson_paint::{build_display_list, Canvas, SolidColor};
 use robinson_style::StyleTree;
 
@@ -66,27 +66,23 @@ impl State {
         };
 
         let style_tree = StyleTree::new(root_node, stylesheets);
-        let layout_root = robinson_layout::layout_tree(&style_tree.root.borrow(), &mut viewport);
+        let render_tree = RenderTree::new(&style_tree.root.borrow(), &mut viewport);
 
-        let canvas = Canvas::new(
-            layout_root,
+        Canvas::new(
+            render_tree,
             viewport.content.width as usize,
             viewport.content.height as usize,
-        );
-
-        canvas
+        )
     }
 
     fn generate_vertices(display: &Display, canvas: Canvas) -> VertexBuffer<Vertex> {
         let mut vertices = vec![];
-        let display_list = build_display_list(&canvas.layout);
+        let display_list = build_display_list(&canvas.render_tree.root);
         for item in &display_list {
-            paint_item(&mut vertices, &item);
+            paint_item(&mut vertices, item);
         }
 
-        let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
-
-        vertex_buffer
+        VertexBuffer::new(display, &vertices).unwrap()
     }
 
     pub fn render(&self) {
@@ -98,14 +94,14 @@ impl State {
         let h = h as f32;
         let yoff = 0.0;
 
-        let box_translate = Matrix4::from_translation(Vector3::new(-1.0, yoff / h + 1.0, 0.0));
-        let box_scale = Matrix4::from_nonuniform_scale(4.0 / w, -4.0 / h, 1.0);
-        let box_trans: [[f32; 4]; 4] = (box_translate * box_scale).into();
-        let uniforms = uniform! { matrix: box_trans  };
+        let box_translate = Mat4::from_translation(Vec3::new(-1.0, yoff / h + 1.0, 0.0));
+        let box_scale = Mat4::from_scale(Vec3::new(4.0 / w, -4.0 / h, 1.0));
+        let box_trans = (box_translate * box_scale).to_cols_array_2d();
+        let uniforms = uniform! { matrix: box_trans };
         target
             .draw(
                 &self.vertex_buffer,
-                &self.indices,
+                self.indices,
                 &self.rect_program,
                 &uniforms,
                 &Default::default(),
