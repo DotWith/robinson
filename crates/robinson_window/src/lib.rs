@@ -2,7 +2,7 @@ use robinson_css::StyleSheet;
 use robinson_dom::Node;
 use state::State;
 use winit::{
-    event::{Event, WindowEvent},
+    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -23,7 +23,23 @@ pub async fn create_window(title: &str, root_node: &Node, stylesheets: &Vec<Styl
             WindowEvent::Resized(size) => state.resize(*size),
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                 state.resize(**new_inner_size)
-            }
+            },
+            WindowEvent::KeyboardInput {
+                input: KeyboardInput {
+                    // state,
+                    virtual_keycode: Some(keycode),
+                    ..
+                },
+                ..
+            } => {
+                match keycode {
+                    VirtualKeyCode::P => {
+                        // Make the pdf (temp keybind).
+                        state.print_pdf().unwrap();
+                    }
+                    _ => {}
+                }
+            },
             _ => (),
         },
         Event::RedrawRequested(_) => state.render().unwrap(),

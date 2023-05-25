@@ -4,6 +4,9 @@ Robinson is a toy web rendering engine written in Rust by Matt Brubeck (mbrubeck
 It's main purpose if to render web pages, but as of now it lacks
 real-world usability, tandards compliance, performance and efficiency, and interoperability.
 
+### Keybinds
+* **P** - Prints the canvas to a PDF
+
 ### Task list
 
 - [X] Parse a small subset of HTML and build a DOM tree
@@ -11,7 +14,7 @@ real-world usability, tandards compliance, performance and efficiency, and inter
 - [X] Perform selector matching to apply styles to elements
 - [X] Implement basic block layout
 - [X] Implement error handling
-- [ ] Implement exporting to PDF
+- [X] Implement exporting to PDF
 - [ ] Implement inline layout
 - [ ] Implement text and box painting
 - [X] Implement resource loading from network or filesystem

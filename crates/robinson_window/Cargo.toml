@@ -9,6 +9,7 @@ robinson_dom = { version = "0.1.0", path = "../robinson_dom" }
 robinson_layout = { version = "0.1.0", path = "../robinson_layout" }
 robinson_style = { version = "0.1.0", path = "../robinson_style" }
 robinson_paint = { version = "0.1.0", path = "../robinson_paint" }
+robinson_pdf = { version = "0.1.0", path = "../robinson_pdf" }
 
 # other
 winit = "0.28.6"

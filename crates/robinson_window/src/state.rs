@@ -1,3 +1,5 @@
+use std::{fs::File, io::{BufWriter, self}};
+
 use glam::{Mat4, Vec3};
 use robinson_css::StyleSheet;
 use robinson_dom::Node;
@@ -309,10 +311,32 @@ impl State {
             &self.stylesheets,
         );
         let verts = Self::generate_vertices(canvas);
-        self.queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&verts));
+        self.queue
+            .write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&verts));
 
         self.camera_uniform = Self::generate_matrix(size);
-        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+        self.queue.write_buffer(
+            &self.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[self.camera_uniform]),
+        );
+    }
+
+    pub fn print_pdf(&self) -> Result<(), io::Error> {
+        let canvas = Self::generate_canvas(
+            self.window_size.width as f32,
+            self.window_size.height as f32,
+            &self.root_node,
+            &self.stylesheets,
+        );
+        let mut file = BufWriter::new(File::create(&"output.pdf").unwrap());
+        robinson_pdf::render(
+            &canvas.render_tree,
+            canvas.width as f32,
+            canvas.height as f32,
+            &mut file,
+        )?;
+        Ok(())
     }
 }
 
